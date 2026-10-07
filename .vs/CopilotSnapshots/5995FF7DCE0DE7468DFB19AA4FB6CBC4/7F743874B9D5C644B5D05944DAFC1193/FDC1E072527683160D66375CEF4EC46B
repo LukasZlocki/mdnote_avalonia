@@ -1,0 +1,53 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="mdnote.UI.MainWindow"
+        Title="mdnote"
+        DragDrop.AllowDrop="True"
+        DragDrop.DragOver="OnDragOver"
+        DragDrop.Drop="OnDrop"
+        KeyDown="OnKeyDown"
+        SystemDecorations="None"
+		Background="#202020"
+        Width="400" Height="600">
+    <Grid RowDefinitions="20,*,20">
+        <Border Grid.Row="0"
+                Background="#2b2b2b"
+                PointerPressed="OnTitleBarPointerPressed">
+            <Button Width="12"
+                    Height="12"
+                    Padding="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Margin="0,0,6,0"
+                    Background="Red"
+                    BorderThickness="0"
+                    CornerRadius="6"
+                    PointerPressed="OnCloseButtonPointerPressed"
+                    Click="OnCloseButtonClick" />
+        </Border>
+        <edit:TextEditor Grid.Row="1"
+						 Background="#202020"
+                         Name="Editor"
+                         FontSize="16"
+                        ShowLineNumbers="False"
+                         Margin="5" />
+        <Border Grid.Row="2" Background="#2b2b2b">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Name="Status"
+                           Foreground="White"
+                           VerticalAlignment="Center"
+                           Margin="6,0" />
+                <TextBlock Grid.Column="1"
+                           Text="mdnote"	   
+                           FontSize="12"
+                           Foreground="DarkGreen"
+                           VerticalAlignment="Center"
+                           Margin="0,0" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

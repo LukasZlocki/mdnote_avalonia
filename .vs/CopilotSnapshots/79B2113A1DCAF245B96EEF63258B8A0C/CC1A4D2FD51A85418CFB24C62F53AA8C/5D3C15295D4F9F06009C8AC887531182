@@ -1,0 +1,36 @@
+﻿namespace mdnote.UI
+
+open Avalonia
+open Avalonia.Controls
+open Avalonia.Markup.Xaml
+open Avalonia.Media
+open AvaloniaEdit
+open AvaloniaEdit.Document
+open AvaloniaEdit.Rendering
+
+type private MarkerColorizer() =
+    inherit DocumentColorizingTransformer()
+
+    override this.ColorizeLine(line: DocumentLine) =
+        let marker = this.CurrentContext.Document.GetText(line)
+
+        if marker.StartsWith("#") then
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Blue))
+        elif marker.StartsWith("*") then
+            this.ChangeLinePart(line.Offset + 1, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Green))
+        elif marker.StartsWith("-") then
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Orange))
+
+type MainWindow () as this = 
+    inherit Window ()
+
+    do
+        this.InitializeComponent()
+        let editor = this.FindControl<TextEditor>("Editor")
+        editor.TextArea.TextView.LineTransformers.Add(MarkerColorizer())
+
+    member private this.InitializeComponent() =
+        AvaloniaXamlLoader.Load(this)

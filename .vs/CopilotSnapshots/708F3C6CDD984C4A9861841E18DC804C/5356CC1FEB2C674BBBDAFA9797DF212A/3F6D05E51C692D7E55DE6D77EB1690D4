@@ -1,0 +1,18 @@
+﻿namespace mdnote.Application;
+
+public sealed class TextFileService(ITextFileReader fileReader)
+{
+    public string Load(string filePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        var extension = Path.GetExtension(filePath);
+        if (!string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotSupportedException("Only Markdown and text files are supported.");
+        }
+
+        return fileReader.ReadAllText(filePath);
+    }
+}

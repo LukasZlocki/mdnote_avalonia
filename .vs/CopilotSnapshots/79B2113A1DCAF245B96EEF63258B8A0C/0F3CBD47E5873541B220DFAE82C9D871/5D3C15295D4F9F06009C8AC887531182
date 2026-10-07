@@ -1,0 +1,76 @@
+﻿namespace mdnote.UI
+
+open Avalonia
+open Avalonia.Controls
+open Avalonia.Input
+open Avalonia.Markup.Xaml
+open Avalonia.Media
+open System
+open System.IO
+open System.Text.Json
+open mdnote.Domain
+open AvaloniaEdit
+open AvaloniaEdit.Document
+open AvaloniaEdit.Rendering
+
+module private WindowPositionStorage =
+    let private filePath =
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "mdnote",
+            "window-position.json")
+
+    let load () =
+        try
+            if File.Exists(filePath) then
+                File.ReadAllText(filePath)
+                |> JsonSerializer.Deserialize<WindowPosition>
+                |> Option.ofObj
+            else
+                None
+        with _ ->
+            None
+
+    let save (position: PixelPoint) =
+        try
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)) |> ignore
+            let savedPosition = WindowPosition()
+            savedPosition.X <- position.X
+            savedPosition.Y <- position.Y
+            File.WriteAllText(filePath, JsonSerializer.Serialize(savedPosition))
+        with _ ->
+            ()
+
+type private MarkerColorizer() =
+    inherit DocumentColorizingTransformer()
+
+    override this.ColorizeLine(line: DocumentLine) =
+        let marker = this.CurrentContext.Document.GetText(line)
+
+        if marker.StartsWith("#") then
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Blue))
+        elif marker.StartsWith("*") then
+            this.ChangeLinePart(line.Offset + 1, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Green))
+        elif marker.StartsWith("-") then
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Orange))
+
+type MainWindow () as this = 
+    inherit Window ()
+
+    do
+        this.InitializeComponent()
+        let editor = this.FindControl<TextEditor>("Editor")
+        editor.TextArea.TextView.LineTransformers.Add(MarkerColorizer())
+        match WindowPositionStorage.load() with
+        | Some position -> this.Position <- PixelPoint(position.X, position.Y)
+        | None -> ()
+        this.Closed.Add(fun _ -> WindowPositionStorage.save(this.Position))
+
+    member private this.OnTitleBarPointerPressed(_: obj, e: PointerPressedEventArgs) =
+        this.BeginMoveDrag(e)
+
+    member private this.InitializeComponent() =
+        AvaloniaXamlLoader.Load(this)

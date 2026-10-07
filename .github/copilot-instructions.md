@@ -1,0 +1,16 @@
+# Copilot Instructions
+
+## General Guidelines
+- For multi-step implementation work, pause after completing each plan step and ask the user whether to proceed before starting the next step.
+
+## Project Technology Stack
+* Avalonia UI for cross-platform desktop application development
+* C# and .NET 10.0 for application logic
+
+## Project Guidelines
+- For this project, follow the layered structure when implementing features: 
+  - mdnote.UI contains Avalonia views, ViewModels, and app startup; 
+  - mdnote.Application contains app operations and interfaces; 
+  - mdnote.Domain contains core note and preference types; 
+  - mdnote.Infrastructure contains file and settings implementations. 
+- Keep new feature code in the appropriate layer and respect layer boundaries.

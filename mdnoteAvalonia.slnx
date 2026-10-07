@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="mdnote.Application/mdnote.Application.csproj" />
+  <Project Path="mdnote.Domain/mdnote.Domain.csproj" />
+  <Project Path="mdnote.Infrastructure/mdnote.Infrastructure.csproj" />
+  <Project Path="mdnote.UI/mdnote.UI.fsproj" />
+</Solution>

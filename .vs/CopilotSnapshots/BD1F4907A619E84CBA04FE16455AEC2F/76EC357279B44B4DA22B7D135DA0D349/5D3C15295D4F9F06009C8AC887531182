@@ -1,0 +1,161 @@
+﻿namespace mdnote.UI
+
+open Avalonia
+open Avalonia.Controls
+open Avalonia.Input
+open Avalonia.Markup.Xaml
+open Avalonia.Media
+open Avalonia.Platform.Storage
+open Avalonia.Threading
+open System
+open System.IO
+open mdnote.Application
+open mdnote.Domain
+open AvaloniaEdit
+open AvaloniaEdit.Document
+open AvaloniaEdit.Rendering
+
+type private MarkerColorizer() =
+    inherit DocumentColorizingTransformer()
+
+    override this.ColorizeLine(line: DocumentLine) =
+        let marker = this.CurrentContext.Document.GetText(line)
+
+        if marker.StartsWith("#") then
+            let headingSize =
+                if marker.StartsWith("###") then 16.0
+                elif marker.StartsWith("##") then 18.0
+                else 20.0
+
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetFontRenderingEmSize(headingSize)
+                element.TextRunProperties.SetForegroundBrush(Brushes.Blue))
+        elif marker.StartsWith("*") then
+            this.ChangeLinePart(line.Offset + 1, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Green))
+        elif marker.StartsWith("-") then
+            this.ChangeLinePart(line.Offset, line.EndOffset, fun element ->
+                element.TextRunProperties.SetForegroundBrush(Brushes.Orange))
+
+type MainWindow (windowPositionService: IWindowPositionService, textFileService: ITextFileService, lastOpenedFileService: ILastOpenedFileService) as this =
+    inherit Window ()
+
+    let mutable currentFilePath: string option = None
+    let saveStatusTimer = DispatcherTimer()
+    let savedWindowPosition = windowPositionService.Load()
+
+    do
+        this.InitializeComponent()
+        saveStatusTimer.Interval <- TimeSpan.FromSeconds(5.0)
+        saveStatusTimer.Tick.Add(fun _ ->
+            saveStatusTimer.Stop()
+            this.FindControl<TextBlock>("Status").Text <- "")
+        let editor = this.FindControl<TextEditor>("Editor")
+        editor.TextArea.TextView.LineTransformers.Add(MarkerColorizer())
+        match lastOpenedFileService.Load() with
+        | null -> ()
+        | path when not (String.IsNullOrWhiteSpace(path)) && this.IsSupportedFilePath(path) ->
+            try
+                editor.Text <- textFileService.Load(path)
+                currentFilePath <- Some path
+            with
+            | :? IOException
+            | :? UnauthorizedAccessException
+            | :? NotSupportedException
+            | :? ArgumentException -> ()
+        | _ -> ()
+        this.Opened.Add(fun _ ->
+            match savedWindowPosition with
+            | null -> ()
+            | position ->
+                this.Position <- PixelPoint(position.X, position.Y)
+                if Double.IsFinite(position.Width) && position.Width > 0.0 then
+                    this.Width <- position.Width
+                if Double.IsFinite(position.Height) && position.Height > 0.0 then
+                    this.Height <- position.Height)
+        this.Closing.Add(fun _ ->
+            let position = WindowPosition()
+            position.X <- this.Position.X
+            position.Y <- this.Position.Y
+            position.Width <- this.Bounds.Width
+            position.Height <- this.Bounds.Height
+            windowPositionService.Save(position))
+
+    member private this.OnTitleBarPointerPressed(_: obj, e: PointerPressedEventArgs) =
+        this.BeginMoveDrag(e)
+
+    member private this.OnResizeGripPointerPressed(_: obj, e: PointerPressedEventArgs) =
+        this.BeginResizeDrag(WindowEdge.SouthEast, e)
+
+    member private this.OnCloseButtonPointerPressed(_: obj, e: PointerPressedEventArgs) =
+        e.Handled <- true
+
+    member private this.OnCloseButtonClick(_: obj, _: Avalonia.Interactivity.RoutedEventArgs) =
+        this.Close()
+
+    member private this.SaveCurrentFile() =
+        match currentFilePath with
+        | None -> ()
+        | Some path ->
+            try
+                let editor = this.FindControl<TextEditor>("Editor")
+                textFileService.Save(path, editor.Text)
+                let status = this.FindControl<TextBlock>("Status")
+                status.Text <- "File saved."
+                saveStatusTimer.Stop()
+                saveStatusTimer.Start()
+            with
+            | :? IOException
+            | :? UnauthorizedAccessException
+            | :? NotSupportedException
+            | :? ArgumentException -> this.FindControl<TextBlock>("Status").Text <- "Unable to save file"
+
+    member private this.OnKeyDown(_: obj, e: KeyEventArgs) =
+        if e.Key = Key.S && (e.KeyModifiers &&& KeyModifiers.Control) = KeyModifiers.Control then
+            this.SaveCurrentFile()
+            e.Handled <- true
+
+    member private this.IsSupportedFilePath(filePath: string) =
+        let extension = Path.GetExtension(filePath)
+        String.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase)
+        || String.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase)
+
+    member private this.OnDragOver(_: obj, e: DragEventArgs) =
+        let files = e.DataTransfer.TryGetFiles()
+        let hasSupportedFile =
+            not (isNull files)
+            && (files
+                |> Seq.exists (fun file ->
+                    let path = file.TryGetLocalPath()
+                    not (String.IsNullOrWhiteSpace(path)) && this.IsSupportedFilePath(path)))
+
+        e.DragEffects <- if hasSupportedFile then DragDropEffects.Copy else DragDropEffects.None
+        e.Handled <- true
+
+    member private this.OnDrop(_: obj, e: DragEventArgs) =
+        let files = e.DataTransfer.TryGetFiles()
+
+        if not (isNull files) then
+            files
+            |> Seq.tryPick (fun file ->
+                let path = file.TryGetLocalPath()
+                if not (String.IsNullOrWhiteSpace(path)) && this.IsSupportedFilePath(path) then Some path else None)
+            |> Option.iter (fun path ->
+                try
+                    let content = textFileService.Load(path)
+                    let editor = this.FindControl<TextEditor>("Editor")
+                    editor.Text <- content
+                    currentFilePath <- Some path
+                    lastOpenedFileService.Save(path)
+                    saveStatusTimer.Stop()
+                    this.FindControl<TextBlock>("Status").Text <- ""
+                with
+                | :? IOException
+                | :? UnauthorizedAccessException
+                | :? NotSupportedException
+                | :? ArgumentException -> ())
+
+        e.Handled <- true
+
+    member private this.InitializeComponent() =
+        AvaloniaXamlLoader.Load(this)

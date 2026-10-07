@@ -1,0 +1,22 @@
+namespace mdnote.Application;
+
+public interface ILastOpenedFileRepository
+{
+    string? Load();
+
+    void Save(string filePath);
+}
+
+public interface ILastOpenedFileService
+{
+    string? Load();
+
+    void Save(string filePath);
+}
+
+public sealed class LastOpenedFileService(ILastOpenedFileRepository repository) : ILastOpenedFileService
+{
+    public string? Load() => repository.Load();
+
+    public void Save(string filePath) => repository.Save(filePath);
+}

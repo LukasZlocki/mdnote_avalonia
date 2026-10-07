@@ -1,0 +1,17 @@
+﻿using mdnote.Domain;
+
+namespace mdnote.Application;
+
+public interface IWindowPositionRepository
+{
+    WindowPosition? Load();
+
+    void Save(WindowPosition position);
+}
+
+public sealed class WindowPositionService(IWindowPositionRepository repository)
+{
+    public WindowPosition? Load() => repository.Load();
+
+    public void Save(WindowPosition position) => repository.Save(position);
+}
