@@ -15,7 +15,7 @@ public sealed class JsonLastOpenedFileRepository : ILastOpenedFileRepository
         try
         {
             return File.Exists(_filePath)
-                ? JsonSerializer.Deserialize<string>(File.ReadAllText(_filePath))
+                ? JsonSerializer.Deserialize(File.ReadAllText(_filePath), MdnoteJsonSerializerContext.Default.String)
                 : null;
         }
         catch (IOException)
@@ -37,7 +37,7 @@ public sealed class JsonLastOpenedFileRepository : ILastOpenedFileRepository
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-            File.WriteAllText(_filePath, JsonSerializer.Serialize(filePath));
+            File.WriteAllText(_filePath, JsonSerializer.Serialize(filePath, MdnoteJsonSerializerContext.Default.String));
         }
         catch (IOException)
         {

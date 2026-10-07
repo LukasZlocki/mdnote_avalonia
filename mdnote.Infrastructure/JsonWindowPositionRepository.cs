@@ -16,7 +16,7 @@ public sealed class JsonWindowPositionRepository : IWindowPositionRepository
         try
         {
             return File.Exists(_filePath)
-                ? JsonSerializer.Deserialize<WindowPosition>(File.ReadAllText(_filePath))
+                ? JsonSerializer.Deserialize(File.ReadAllText(_filePath), MdnoteJsonSerializerContext.Default.WindowPosition)
                 : null;
         }
         catch (IOException)
@@ -38,7 +38,7 @@ public sealed class JsonWindowPositionRepository : IWindowPositionRepository
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-            File.WriteAllText(_filePath, JsonSerializer.Serialize(position));
+            File.WriteAllText(_filePath, JsonSerializer.Serialize(position, MdnoteJsonSerializerContext.Default.WindowPosition));
         }
         catch (IOException)
         {
